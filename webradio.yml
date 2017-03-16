@@ -1,0 +1,52 @@
+version: '2'
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:0.4.0
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs:ro
+      - ./vhost.d:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+  letsencrypt-nginx-proxy-companion:
+    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    links:
+      - nginx-proxy
+    volumes:
+      - ./certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    volumes_from:
+      - nginx-proxy
+  site:
+    image: nginx
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+    environment:
+      VIRTUAL_HOST: webradio.${domain_name}
+      VIRTUAL_PORT: 80
+      LETSENCRYPT_HOST: webradio.${domain_name}
+      LETSENCRYPT_EMAIL: ${letsencrypt_email}
+  airtime:
+    image: okvic77/airtime
+    ports:
+      - 8002:8001
+    environment:
+      VIRTUAL_HOST: airtime.${domain_name}
+      VIRTUAL_PORT: 80
+      LETSENCRYPT_HOST: airtime.${domain_name}
+      LETSENCRYPT_EMAIL: ${letsencrypt_email}
+  icecast:
+    image: moul/icecast
+    environment:
+      VIRTUAL_HOST: icecast.${domain_name}
+      VIRTUAL_PORT: 8000
+      LETSENCRYPT_HOST: icecast.${domain_name}
+      LETSENCRYPT_EMAIL: ${letsencrypt_email}
+      ICECAST_SOURCE_PASSWORD: ${icecast_src_pwd}
+      ICECAST_ADMIN_PASSWORD: ${icecast_adm_pwd}
+      ICECAST_PASSWORD: ${icecast_src_pwd}
+      ICECAST_RELAY_PASSWORD: ${icecast_src_pwd}
+
